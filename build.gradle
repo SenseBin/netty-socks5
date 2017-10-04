@@ -1,0 +1,47 @@
+group 'sense.test'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.7
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'io.netty', name: 'netty-all', version: '4.0.21.Final'
+    compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.4.7'
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.22'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.6.2'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.6.2'
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+task('copyConf', type: Copy) {
+    from 'src/main/resources'
+    into "build/zip/${project.name}/conf"
+}
+
+task('copyDependencies', type: Copy) {
+    from configurations.compile
+    into "build/zip/${project.name}/lib"
+}
+
+task('copyBin', type: Copy) {
+    from 'src/bin'
+    into "build/zip/${project.name}/bin"
+}
+
+task('copySrc', type: Copy) {
+    from 'src/main/java'
+    into "build/zip/${project.name}/src"
+}
+
+task('package', type: Zip) {
+    from "build/zip"
+    mustRunAfter('clean')
+    dependsOn('clean', 'copyConf', 'copyDependencies', 'copyBin', 'copySrc')
+}
