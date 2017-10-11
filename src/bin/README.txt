@@ -17,8 +17,4 @@ start.sh
 接受JAVA_PROPERTIES环境变量，用于配置JVM的系统属性
 接受JAVA_HOME环境变量，当存在此环境变量时，将使用$JAVA_HOME/bin/java代替java运行本程序
 
-############################################################
-kill.sh
-此文件用与在linux系统下终止本程序。
-
 ——by:sense
