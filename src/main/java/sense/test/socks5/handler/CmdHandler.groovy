@@ -2,8 +2,12 @@ package sense.test.socks5.handler
 
 import io.netty.channel.Channel
 import io.netty.channel.ChannelDuplexHandler
+import io.netty.channel.ChannelFuture
+import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.socks.*
+import io.netty.util.concurrent.Future
+import io.netty.util.concurrent.GenericFutureListener
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import sense.test.socks5.constant.ChannelAttrKey
@@ -43,33 +47,38 @@ class CmdHandler extends ChannelDuplexHandler {
         }
     }
 
-    protected void connect(ChannelHandlerContext ctx, SocksCmdRequest request) {
+    protected void connect(final ChannelHandlerContext ctx, final SocksCmdRequest request) {
         InetSocketAddress clientAddress = ctx.channel().remoteAddress() as InetSocketAddress
         logger.debug('以connect模式进行代理，[{}:{} -> {}:{}]',
                 clientAddress.hostString, clientAddress.port, request.host(), request.port())
 
-        Channel channel = null
-        try {
-            channel = ctx.channel().attr(ChannelAttrKey.BOOTSTRAP).get().connect(request.host(), request.port()).sync().channel()
-            InetSocketAddress socketAddress = channel.remoteAddress() as InetSocketAddress
-            boolean ipv4 = socketAddress.address instanceof Inet4Address
-            SocksAddressType addressType = ipv4 ? SocksAddressType.IPv4 : SocksAddressType.IPv6
-            SocksCmdResponse cmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, addressType, socketAddress.address.getHostAddress(), socketAddress.port)
+        ctx.channel().attr(ChannelAttrKey.BOOTSTRAP).get().connect(request.host(), request.port()).addListener(new ChannelFutureListener() {
+            @Override
+            void operationComplete(ChannelFuture future) throws Exception {
+                Channel channel = null
+                try {
+                    channel = future.sync().channel()
+                    InetSocketAddress socketAddress = channel.remoteAddress() as InetSocketAddress
+                    boolean ipv4 = socketAddress.address instanceof Inet4Address
+                    SocksAddressType addressType = ipv4 ? SocksAddressType.IPv4 : SocksAddressType.IPv6
+                    SocksCmdResponse cmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, addressType, socketAddress.address.getHostAddress(), socketAddress.port)
 
-            ctx.pipeline().addFirst(new ConnectHandler(channel))
-            channel.pipeline().addLast(new ChildConnectHandler(ctx.channel()))
-            ctx.writeAndFlush(cmdResponse)
-            ctx.pipeline().remove(this)
-        } catch (Exception e) {
-            logger.warn('代理connect请求失败', e)
-            try {
-                channel?.close()
-            } catch (ignore) {
+                    ctx.pipeline().addFirst(new ConnectHandler(channel))
+                    channel.pipeline().addLast(new ChildConnectHandler(ctx.channel()))
+                    ctx.writeAndFlush(cmdResponse)
+                    ctx.pipeline().remove(CmdHandler.this)
+                } catch (Exception e) {
+                    logger.warn('代理connect请求失败', e)
+                    try {
+                        channel?.close()
+                    } catch (ignore) {
+                    }
+                    try {
+                        ctx.writeAndFlush(new SocksCmdResponse(SocksCmdStatus.FAILURE, SocksAddressType.UNKNOWN)).channel().close()
+                    } catch (ignore) {
+                    }
+                }
             }
-            try {
-                ctx.writeAndFlush(new SocksCmdResponse(SocksCmdStatus.FAILURE, SocksAddressType.UNKNOWN)).sync().channel().close()
-            } catch (ignore) {
-            }
-        }
+        })
     }
 }

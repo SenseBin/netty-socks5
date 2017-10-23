@@ -21,3 +21,5 @@ for %%i in (*) do set LIB_JARS=!LIB_JARS!;..\lib\%%i
 cd ..\bin
 
 %JAVA_EXEC% %JAVA_OPTS% -classpath ..\conf;%LIB_JARS%;%JAVA_CLASSPATH% %JAVA_PROPERTIES% %JAVA_MAIN% -indy -c UTF-8 %GROOVY_MAIN% %1 %2 %3 %4 %5 %6 %7 %8 %9
+
+pause

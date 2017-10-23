@@ -16,8 +16,8 @@ class ChildConnectHandler extends ChannelDuplexHandler {
 
     @Override
     void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        channel.close()
         ctx.close()
+        channel.close()
     }
 
     @Override

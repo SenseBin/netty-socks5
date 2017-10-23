@@ -27,7 +27,7 @@ VAR_PRE_JAVA_PROPERTIES=
 VAR_JAVA_PROPERTIES="$JAVA_PROPERTIES $VAR_PRE_JAVA_PROPERTIES"
 
 MAIN_CLASS="groovy.ui.GroovyMain"
-GROOVY_MAIN="../src/sense/test/socks5/Main.groovy"
+GROOVY_MAIN="$VAR_SRC_DIR/sense/test/socks5/Main.groovy"
 
 ARGS=""
 for arg_temp in $@
@@ -42,4 +42,7 @@ else
     VAR_JAVA_PATH="java"
 fi
 
-$VAR_JAVA_PATH $VAR_JAVA_OPTS -classpath $VAR_CONF_DIR:$VAR_LIB_JARS:$VAR_SRC_DIR $VAR_PRE_JAVA_PROPERTIES $MAIN_CLASS -indy -c UTF-8 $GROOVY_MAIN $ARGS > $VAR_STDOUT_FILE 2>&1 &
+nohup $VAR_JAVA_PATH $VAR_JAVA_OPTS -classpath $VAR_CONF_DIR:$VAR_LIB_JARS:$VAR_SRC_DIR $VAR_PRE_JAVA_PROPERTIES $MAIN_CLASS -indy -c UTF-8 $GROOVY_MAIN $ARGS > $VAR_STDOUT_FILE 2>&1 &
+
+VAR_PIDS=`ps -f | grep java | grep "$VAR_DEPLOY_DIR" | awk '{print $2}'`
+echo "PID: $VAR_PIDS"
