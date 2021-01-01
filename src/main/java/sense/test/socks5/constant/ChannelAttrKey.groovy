@@ -8,4 +8,5 @@ import io.netty.util.AttributeKey
  */
 interface ChannelAttrKey {
     AttributeKey<Bootstrap> BOOTSTRAP = new AttributeKey('bootstrap')
+    AttributeKey<Bootstrap> BOOTSTRAP_UDP = new AttributeKey('bootstrap_udp')
 }

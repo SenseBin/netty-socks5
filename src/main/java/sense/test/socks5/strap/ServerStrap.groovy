@@ -7,6 +7,7 @@ import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.codec.socks.SocksCmdRequestDecoder
@@ -39,16 +40,23 @@ class ServerStrap {
             return new Thread(r, "childGroup-" + atomicLong.getAndIncrement())
         }
     })
-    private Bootstrap childConnectBootstrap = new Bootstrap().with {
-        EventLoopGroup group = new NioEventLoopGroup(0, new ThreadFactory() {
-            private AtomicLong atomicLong = new AtomicLong()
+    private EventLoopGroup childConnectGroup = new NioEventLoopGroup(0, new ThreadFactory() {
+        private AtomicLong atomicLong = new AtomicLong()
 
+        @Override
+        Thread newThread(Runnable r) {
+            return new Thread(r, "childConnectGroup-" + atomicLong.getAndIncrement())
+        }
+    })
+    private Bootstrap childConnectBootstrap = new Bootstrap().with {
+        it.group(childConnectGroup).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
             @Override
-            Thread newThread(Runnable r) {
-                return new Thread(r, "childConnectGroup-" + atomicLong.getAndIncrement())
+            protected void initChannel(SocketChannel socketChannel) throws Exception {
             }
-        })
-        it.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
+        }).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+    }
+    private Bootstrap childUdpConnectBootstrap = new Bootstrap().with {
+        it.group(childConnectGroup).channel(NioDatagramChannel.class).handler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel socketChannel) throws Exception {
             }
@@ -62,14 +70,15 @@ class ServerStrap {
         serverBootstrapTemplate.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline()
+                def channel = ch.pipeline()
                         .addLast(new SocksMessageEncoder())
                         .addLast(new SocksInitRequestDecoder())
                         .addLast(new InitHandler())
                         .addLast(new SocksCmdRequestDecoder())
                         .addLast(new CmdHandler())
                         .channel()
-                        .attr(ChannelAttrKey.BOOTSTRAP).set(childConnectBootstrap)
+                channel.attr(ChannelAttrKey.BOOTSTRAP).set(childConnectBootstrap)
+                channel.attr(ChannelAttrKey.BOOTSTRAP_UDP).set(childUdpConnectBootstrap)
             }
         })
         serverBootstrapTemplate.bind(port).sync().channel().closeFuture().await()

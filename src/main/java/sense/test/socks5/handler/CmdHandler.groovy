@@ -42,6 +42,9 @@ class CmdHandler extends ChannelDuplexHandler {
             case SocksCmdType.CONNECT:
                 connect(ctx, request)
                 break
+            case SocksCmdType.UDP:
+                udp(ctx, request)
+                break
             default:
                 ctx.close()
         }
@@ -69,6 +72,41 @@ class CmdHandler extends ChannelDuplexHandler {
                     ctx.pipeline().remove(CmdHandler.this)
                 } catch (Exception e) {
                     logger.warn('代理connect请求失败', e)
+                    try {
+                        channel?.close()
+                    } catch (ignore) {
+                    }
+                    try {
+                        ctx.writeAndFlush(new SocksCmdResponse(SocksCmdStatus.FAILURE, SocksAddressType.UNKNOWN)).channel().close()
+                    } catch (ignore) {
+                    }
+                }
+            }
+        })
+    }
+
+    protected void udp(final ChannelHandlerContext ctx, final SocksCmdRequest request) {
+        InetSocketAddress clientAddress = ctx.channel().remoteAddress() as InetSocketAddress
+        logger.debug('以udp模式进行代理，[{}:{} -> {}:{}]',
+                clientAddress.hostString, clientAddress.port, request.host(), request.port())
+
+        ctx.channel().attr(ChannelAttrKey.BOOTSTRAP_UDP).get().connect(request.host(), request.port()).addListener(new ChannelFutureListener() {
+            @Override
+            void operationComplete(ChannelFuture future) throws Exception {
+                Channel channel = null
+                try {
+                    channel = future.sync().channel()
+                    InetSocketAddress socketAddress = channel.remoteAddress() as InetSocketAddress
+                    boolean ipv4 = socketAddress.address instanceof Inet4Address
+                    SocksAddressType addressType = ipv4 ? SocksAddressType.IPv4 : SocksAddressType.IPv6
+                    SocksCmdResponse cmdResponse = new SocksCmdResponse(SocksCmdStatus.SUCCESS, addressType, socketAddress.address.getHostAddress(), socketAddress.port)
+
+                    ctx.pipeline().addFirst(new ConnectHandler(channel))
+                    channel.pipeline().addLast(new ChildConnectHandler(ctx.channel()))
+                    ctx.writeAndFlush(cmdResponse)
+                    ctx.pipeline().remove(CmdHandler.this)
+                } catch (Exception e) {
+                    logger.warn('代理udp请求失败', e)
                     try {
                         channel?.close()
                     } catch (ignore) {
