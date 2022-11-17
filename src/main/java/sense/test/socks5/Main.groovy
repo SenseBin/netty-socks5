@@ -16,6 +16,7 @@ class Main {
             cli.usage = '指定服务启动所监听的端口。'
             cli.options
                     .addOption('p', 'port', true, '指定服务启动所监听的端口。（默认：1080）')
+                    .addOption('P', 'protocol', true, '指定代理服务器类型，枚举值范围：http,https,socks5')
                     .addOption('h', 'help', false, '显示此帮助信息。')
 
             def opt = cli.parse(args)
@@ -25,9 +26,10 @@ class Main {
             }
 
             def port = (opt.p ? opt.p : '1080') as int
+            def protocol = (opt.P ? opt.P : 'socks5') as String
 
-            logger.info('程序启动，监听端口：{}', port as String)
-            new ServerStrap().init(port)
+            logger.info('程序启动，监听端口：{}，协议：{}', port as String, protocol)
+            new ServerStrap().init(port, protocol)
         } catch (Exception ex) {
             logger.error('程序启动出错。', ex)
             System.exit(2)
