@@ -34,6 +34,6 @@ JRE/JDK 8 以上环境
 (3) 在build/distributions目录下可以找到产物
 
 # Run/运行
-Extract the artifacts, and you can find the corresponding executable files (sh / bat) in the bin directory.
+Extract the artifacts, and you can find the corresponding executable files (sh / bat) in the bin directory. See <a href="./src/bin/README.en.md">README.en.md</a>
 
-将产物解压，在bin目录下可找到对应的可执行文件(sh / bat)
+将产物解压，在bin目录下可找到对应的可执行文件(sh / bat)。参考 <a href="./src/bin/README.en.md">README.ch.md</a>
